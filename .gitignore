@@ -1,0 +1,14 @@
+# If you are using PyCharm # 
+# User-specific stuff
+.idea/
+
+.env
+
+.venv/
+
+node_modules/
+
+.vscode/
+
+__pycache__/
+*.pyc
