@@ -1,0 +1,361 @@
+{% extends "base.html" %} {% load static %} {% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/cropper.css' %}" />
+<script src="{% static 'js/cropper.js' %}"></script>
+{% endblock %} {% block content %}
+<div class="container mt-5">
+  <h2 class="mb-4 text-center">Реєстрація</h2>
+  <p class="text-danger">{{ error }}</p>
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <form
+        action="{% url 'register' %}"
+        method="post"
+        class="border rounded p-4 bg-light"
+        enctype="multipart/form-data"
+      >
+        {% csrf_token %}
+
+        <!-- Ім'я -->
+        <div class="mb-3">
+          <label for="first_name" class="form-label">Ім'я</label>
+          <input
+            type="text"
+            class="form-control"
+            id="first_name"
+            name="first_name"
+            placeholder="Введіть ім'я"
+            required
+          />
+        </div>
+
+        <!-- Прізвище -->
+        <div class="mb-3">
+          <label for="last_name" class="form-label">Прізвище</label>
+          <input
+            type="text"
+            class="form-control"
+            id="last_name"
+            name="last_name"
+            placeholder="Введіть прізвище"
+            required
+          />
+        </div>
+
+        <!-- Ім'я користувача -->
+        <div class="mb-3">
+          <label for="username" class="form-label">Ім'я користувача</label>
+          <input
+            type="text"
+            class="form-control"
+            id="username"
+            name="username"
+            placeholder="Введіть ім'я користувача"
+            autocomplete="username"
+            required
+          />
+        </div>
+
+        <!-- Email -->
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <input
+            type="email"
+            class="form-control"
+            id="email"
+            name="email"
+            placeholder="name@example.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <!-- Пароль -->
+        <div class="mb-3">
+          <label for="password" class="form-label">Пароль</label>
+          <input
+            type="password"
+            class="form-control"
+            id="password"
+            name="password"
+            placeholder="Введіть пароль"
+            autocomplete="new-password"
+            required
+            minlength="6"
+          />
+        </div>
+
+        <!-- Підтвердження пароля -->
+        <div class="mb-4">
+          <label for="repeatPassword" class="form-label"
+            >Підтвердіть пароль</label
+          >
+          <input
+            type="password"
+            class="form-control"
+            id="repeatPassword"
+            name="repeatPassword"
+            placeholder="Повторіть пароль"
+            autocomplete="new-password"
+            required
+            minlength="6"
+          />
+        </div>
+
+        <!-- Зображення користувача -->
+        <div class="mb-4">
+          <label for="image" class="form-label">Зображення користувача</label>
+          <input
+            type="file"
+            class="form-control"
+            id="image"
+            name="image"
+            accept="image/*"
+          />
+          <!-- Приховане поле для base64 кадрованого зображення -->
+          <input
+            type="hidden"
+            id="cropped_image_data"
+            name="cropped_image_data"
+          />
+        </div>
+
+        <!-- Аватар-попередній перегляд -->
+        <div class="form-label mb-6 text-center">
+          <div id="avatarPreviewWrapper">
+            <img
+              id="avatarPreview"
+              src=""
+              alt="Avatar"
+              class="rounded-circle border border-2"
+              style="
+                width: 120px;
+                height: 120px;
+                object-fit: cover;
+                object-position: center;
+                display: none;
+                cursor: pointer;
+              "
+            />
+          </div>
+        </div>
+
+        <!-- Модалка для кадрування -->
+        <div
+          class="modal fade"
+          id="cropperModal"
+          tabindex="-1"
+          aria-labelledby="cropperModalLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="cropperModalLabel">
+                  Кадрування фото
+                </h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div class="modal-body">
+                <div class="img-container w-100 text-center">
+                  <img
+                    id="imagePreview"
+                    src=""
+                    alt="Picture"
+                    style="max-width: 100%; max-height: 300px"
+                  />
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  data-bs-dismiss="modal"
+                >
+                  Скасувати
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  id="btn-crop-confirm"
+                >
+                  Застосувати
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Кнопка відправки -->
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary">Зареєструватися</button>
+        </div>
+
+        <!-- Посилання на логін -->
+        <p class="mt-3 mb-0 text-center">
+          Вже маєте акаунт?
+          <a href="{% url 'login' %}">Увійти</a>
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock content %} {% block extra_js %}
+<script>
+  let cropper = null;
+  const imageInput = document.getElementById("image");
+  const imagePreview = document.getElementById("imagePreview");
+  const avatarPreview = document.getElementById("avatarPreview");
+  let cropperModal = null;
+
+  // Ініціалізація модалки
+  document.addEventListener("DOMContentLoaded", function () {
+    const modalEl = document.getElementById("cropperModal");
+    cropperModal = new bootstrap.Modal(modalEl);
+  });
+
+  // Відкрити модалку при виборі фото
+  imageInput.addEventListener("change", function (e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        imagePreview.src = ev.target.result;
+        imagePreview.onload = function () {
+          if (cropper) {
+            cropper.destroy();
+          }
+          cropper = new Cropper(imagePreview, {
+            aspectRatio: 1 / 1,
+            viewMode: 1,
+            background: false, // прибирає прозорі межі
+            autoCropArea: 1,
+            responsive: true,
+            guides: false,
+            highlight: false,
+            dragMode: "move",
+            movable: true,
+            zoomable: true,
+            rotatable: false,
+            scalable: false,
+            cropBoxResizable: true,
+            cropBoxMovable: true,
+            minCropBoxWidth: 120,
+            minCropBoxHeight: 120,
+          });
+        };
+        cropperModal.show();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Підтвердити кадрування
+  document
+    .getElementById("btn-crop-confirm")
+    .addEventListener("click", function () {
+      if (cropper) {
+        const croppedImage = cropper
+          .getCroppedCanvas({
+            width: 240,
+            height: 240,
+            imageSmoothingQuality: "high",
+          })
+          .toDataURL("image/png");
+        avatarPreview.src = croppedImage;
+        avatarPreview.style.display = "inline-block";
+        // Зберігаємо base64 у приховане поле
+        document.getElementById("cropped_image_data").value = croppedImage;
+        cropperModal.hide();
+        // Зберігаємо, що фото вже було підтверджено
+        avatarPreview.dataset.confirmed = "true";
+      }
+    });
+
+  // Скасувати: якщо фото тільки що завантажене (а не редагується), скинути input і preview
+  document
+    .querySelector("#cropperModal .btn-secondary")
+    .addEventListener("click", function () {
+      // Якщо фото ще не було підтверджено (тобто користувач тільки завантажив, але не натискав "Застосувати")
+      if (!avatarPreview.dataset.confirmed) {
+        imageInput.value = "";
+        avatarPreview.src = "";
+        avatarPreview.style.display = "none";
+        if (cropper) {
+          cropper.destroy();
+          cropper = null;
+        }
+        imagePreview.src = "";
+      }
+    });
+
+  // Відкрити модальне при кліку на аватар
+  avatarPreview.addEventListener("click", function () {
+    if (imagePreview.src) {
+      cropperModal.show();
+      // cropper вже ініціалізований, якщо ні — ініціалізувати
+      if (!cropper) {
+        cropper = new Cropper(imagePreview, {
+          aspectRatio: 1 / 1,
+          viewMode: 1,
+          background: false,
+          autoCropArea: 1,
+          responsive: true,
+          guides: false,
+          highlight: false,
+          dragMode: "move",
+          movable: true,
+          zoomable: true,
+          rotatable: false,
+          scalable: false,
+          cropBoxResizable: true,
+          cropBoxMovable: true,
+          minCropBoxWidth: 120,
+          minCropBoxHeight: 120,
+        });
+      }
+      // Позначаємо, що це редагування, а не нове завантаження
+      avatarPreview.dataset.confirmed = "true";
+    }
+  });
+
+  // Заміняємо кадроване фото у input перед відправкою форми
+  document.querySelector("form").addEventListener("submit", function (e) {
+    const croppedData = document.getElementById("cropped_image_data").value;
+    if (croppedData) {
+      // Перетворити base64 у Blob
+      function dataURLtoBlob(dataurl) {
+        const arr = dataurl.split(",");
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+      }
+      const blob = dataURLtoBlob(croppedData);
+      // Взяти оригінальну назву файлу, якщо є
+      let fileName = "avatar.png";
+      if (
+        imageInput.files &&
+        imageInput.files.length > 0 &&
+        imageInput.files[0].name
+      ) {
+        fileName = imageInput.files[0].name;
+      }
+      const file = new File([blob], fileName, { type: "image/png" });
+      // Створити DataTransfer для заміни файлу у input
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      imageInput.files = dt.files;
+    }
+  });
+</script>
+
+{% endblock %}

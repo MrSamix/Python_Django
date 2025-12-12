@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <h2 class="mb-4 text-center">Авторизація</h2>
+            <p class="text-danger">{{ error }}</p>
+            <form action="{% url 'login' %}" method="post" autocomplete="on" novalidate>
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="username" class="form-label">Логін</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="username"
+                        name="username"
+                        placeholder="Введіть логін"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Пароль</label>
+                    <input
+                        type="password"
+                        class="form-control"
+                        id="password"
+                        name="password"
+                        placeholder="Введіть пароль"
+                        required
+                    >
+                </div>
+
+                <div class="d-grid mb-2">
+                    <button type="submit" class="btn btn-primary">
+                        Увійти
+                    </button>
+                </div>
+
+                <div class="d-grid">
+                    <a href="{% url 'register' %}" class="btn btn-outline-secondary">
+                        Зареєструватися
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}

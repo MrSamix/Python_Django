@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block mycontent %}
+
+<h1 class="text-center">Додати категорій</h1>
+<div class="row">
+    <form class="col-md-12">
+        <div class="mb-3">
+            <label for="name" class="form-label">Назва</label>
+            <input type="text" class="form-control" name="name" id="name">
+        </div>
+        <div class="mb-3 form-group">
+            <label for="description" class="form-label">Опис</label>
+            <textarea type="text" class="form-control" id="descriptionArea"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Додати</button>
+    </form>
+</div>
+
+{% endblock %}
+
+
+{% block myscripts %}
+<script>
+    tinymce.init({
+      selector: '#descriptionArea',
+      license_key: 'gpl', // gpl for open source, T8LK:... for commercial
+      plugins: [
+        // Core editing features
+        'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount'],
+      toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+      setup: (editor) => {
+        editor.on('Paste', async (e) => {
+            e.preventDefault();
+            //console.log("Insert code", e);
+            const clipboardData = e.clipboardData || e.originalEvent?.clipboardData;
+                if (!clipboardData) return;
+
+                const html = clipboardData.getData("text/html");
+                const text = clipboardData.getData("text/plain");
+
+                let contentToInsert = html || text;
+                if (!contentToInsert) return;
+
+                const temp = document.createElement("div");
+                temp.innerHTML = contentToInsert;
+
+                const imgs = Array.from(temp.querySelectorAll("img"));
+
+                for (const img of imgs) {
+                    const src = img.getAttribute("src");
+                    if (!src || src.startsWith("http://127.0.0.1")) continue;
+                    try {
+                        console.log("Upload url", src);
+                        //const { url } = await uploadImage(src);
+                        img.setAttribute("src", "/images/default.jpg");
+                    } catch (err) {
+                        console.error("Failed to upload image:", err);
+                    }
+                }
+                editor.insertContent(temp.innerHTML);
+        });
+      }
+    });
+</script>
+{% endblock %}
