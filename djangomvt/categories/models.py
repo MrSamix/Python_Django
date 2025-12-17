@@ -8,4 +8,17 @@ class Category(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True, verbose_name="Активна")
-    image = models.ImageField(upload_to='images/', blank=True, null=True, verbose_name="Зображення")
+    # image = models.ImageField(upload_to='images/', blank=True, null=True, verbose_name="Зображення")
+
+
+
+class ImagesCategory(models.Model):
+    idcategory = models.ForeignKey(
+        Category,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='images',
+        verbose_name="Категорія"
+    )
+    image = models.ImageField(upload_to='images/', verbose_name="Зображення")

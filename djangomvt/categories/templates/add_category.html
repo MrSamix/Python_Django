@@ -1,67 +1,147 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} 
 
-{% block mycontent %}
 
-<h1 class="text-center">Додати категорій</h1>
+{% block content %}
+
+<h1 class="text-center">Додати категорію</h1>
 <div class="row">
-    <form class="col-md-12">
-        <div class="mb-3">
-            <label for="name" class="form-label">Назва</label>
-            <input type="text" class="form-control" name="name" id="name">
-        </div>
-        <div class="mb-3 form-group">
-            <label for="description" class="form-label">Опис</label>
-            <textarea type="text" class="form-control" id="descriptionArea"></textarea>
-        </div>
+  <form class="col-md-12" method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="name" class="form-label">Назва</label>
+      <input type="text" class="form-control" name="name" id="name" />
+    </div>
+    <div class="mb-3 form-group">
+      <label for="description" class="form-label">Опис</label>
+      <textarea
+        type="text"
+        class="form-control"
+        id="descriptionArea"
+        name="description"
+      ></textarea>
+    </div>
 
-        <button type="submit" class="btn btn-primary">Додати</button>
-    </form>
+    <button type="submit" class="btn btn-primary">Додати</button>
+  </form>
 </div>
 
-{% endblock %}
+{% endblock %} 
 
-
-{% block myscripts %}
+{% block extra_js %}
 <script>
-    tinymce.init({
-      selector: '#descriptionArea',
-      license_key: 'gpl', // gpl for open source, T8LK:... for commercial
-      plugins: [
-        // Core editing features
-        'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount'],
-      toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
-      setup: (editor) => {
-        editor.on('Paste', async (e) => {
-            e.preventDefault();
-            //console.log("Insert code", e);
-            const clipboardData = e.clipboardData || e.originalEvent?.clipboardData;
-                if (!clipboardData) return;
+  function getCookie(name) {
+    const match = document.cookie.match(
+      new RegExp("(^|; )" + name + "=([^;]+)")
+    );
+    return match ? decodeURIComponent(match[2]) : null;
+  }
 
-                const html = clipboardData.getData("text/html");
-                const text = clipboardData.getData("text/plain");
-
-                let contentToInsert = html || text;
-                if (!contentToInsert) return;
-
-                const temp = document.createElement("div");
-                temp.innerHTML = contentToInsert;
-
-                const imgs = Array.from(temp.querySelectorAll("img"));
-
-                for (const img of imgs) {
-                    const src = img.getAttribute("src");
-                    if (!src || src.startsWith("http://127.0.0.1")) continue;
-                    try {
-                        console.log("Upload url", src);
-                        //const { url } = await uploadImage(src);
-                        img.setAttribute("src", "/images/default.jpg");
-                    } catch (err) {
-                        console.error("Failed to upload image:", err);
-                    }
-                }
-                editor.insertContent(temp.innerHTML);
-        });
-      }
+  async function uploadImageFromBlob(blob, filename = "pasted.png") {
+    const formData = new FormData();
+    formData.append("file", blob, filename);
+    const res = await fetch("/categories/upload-image", {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+      body: formData,
     });
+    if (!res.ok) throw new Error("Upload failed");
+    return res.json();
+  }
+
+  async function uploadImageByUrl(url) {
+    const formData = new FormData();
+    formData.append("url", url);
+    const res = await fetch("/categories/upload-image", {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+      body: formData,
+    });
+    if (!res.ok) throw new Error("Upload by URL failed");
+    return res.json();
+  }
+
+  tinymce.init({
+    selector: "#descriptionArea",
+    license_key: "gpl", // gpl for open source, T8LK:... for commercial
+    plugins: [
+      // Core editing features
+      "anchor",
+      "autolink",
+      "charmap",
+      "codesample",
+      "emoticons",
+      "link",
+      "lists",
+      "media",
+      "searchreplace",
+      "table",
+      "visualblocks",
+      "wordcount",
+    ],
+    toolbar:
+      "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat",
+    setup: (editor) => {
+      editor.on("Paste", async (e) => {
+        e.preventDefault();
+        //console.log("Insert code", e);
+        const clipboardData = e.clipboardData || e.originalEvent?.clipboardData;
+        if (!clipboardData) return;
+
+        const html = clipboardData.getData("text/html");
+        const text = clipboardData.getData("text/plain");
+
+        let contentToInsert = html || text;
+        if (!contentToInsert) return;
+
+        const temp = document.createElement("div");
+        temp.innerHTML = contentToInsert;
+
+        const imgs = Array.from(temp.querySelectorAll("img"));
+
+        for (const img of imgs) {
+          const src = img.getAttribute("src");
+          if (!src) continue;
+          try {
+            if (src.startsWith("data:")) {
+              const resp = await fetch(src);
+              const blob = await resp.blob();
+              const { url } = await uploadImageFromBlob(blob, "pasted.png");
+              img.setAttribute("src", url);
+              img.removeAttribute("srcset");
+              img.removeAttribute("sizes");
+              continue;
+            }
+
+            if (src.startsWith("blob:")) {
+              const resp = await fetch(src);
+              const blob = await resp.blob();
+              const { url } = await uploadImageFromBlob(blob, "blob.png");
+              img.setAttribute("src", url);
+              img.removeAttribute("srcset");
+              img.removeAttribute("sizes");
+              continue;
+            }
+
+            if (src.startsWith("http://") || src.startsWith("https://")) {
+              const { url } = await uploadImageByUrl(src);
+              img.setAttribute("src", url);
+              img.removeAttribute("srcset");
+              img.removeAttribute("sizes");
+              continue;
+            }
+          } catch (err) {
+            console.error("Failed to upload image:", err);
+          }
+        }
+        editor.insertContent(temp.innerHTML);
+      });
+    },
+  });
+  // Перед submit синхронізуємо вміст TinyMCE у textarea
+  document.querySelector("form").addEventListener("submit", function () {
+    if (window.tinymce) {
+      tinymce.triggerSave();
+    }
+  });
 </script>
 {% endblock %}
